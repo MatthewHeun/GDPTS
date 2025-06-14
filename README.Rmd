@@ -24,7 +24,9 @@ knitr::opts_chunk$set(
 
 The goal of GDPTS is to develop a harmonized time series 
 of country and world GDP,
-starting from the Penn World Tables
+starting from the Penn World Tables.
+See https://www.rug.nl/ggdc/productivity/pwt/
+and
 [Feenstra et al. [-@Feenstra:2015aa]](https://doi.org/10.1257/aer.20130954).
 
 

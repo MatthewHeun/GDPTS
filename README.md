@@ -11,7 +11,8 @@ coverage](https://codecov.io/gh/MatthewHeun/GDPTS/graph/badge.svg)](https://app.
 <!-- badges: end -->
 
 The goal of GDPTS is to develop a harmonized time series of country and
-world GDP, starting from the Penn World Tables [Feenstra et al.
+world GDP, starting from the Penn World Tables. See
+<https://www.rug.nl/ggdc/productivity/pwt/> and [Feenstra et al.
 (2015)](https://doi.org/10.1257/aer.20130954).
 
 ## Statement of need
