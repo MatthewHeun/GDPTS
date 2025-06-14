@@ -11,7 +11,8 @@ coverage](https://codecov.io/gh/MatthewHeun/GDPTS/graph/badge.svg)](https://app.
 <!-- badges: end -->
 
 The goal of GDPTS is to develop a harmonized time series of country and
-world GDP, starting from the Penn World Tables.
+world GDP, starting from the Penn World Tables [Feenstra et al.
+(2015)](https://doi.org/10.1257/aer.20130954).
 
 ## Statement of need
 
@@ -43,3 +44,18 @@ library(GDPTS)
 
 Find more information, including vignettes and function documentation,
 at <https://MatthewHeun.github.io/GDPTS/>.
+
+## References
+
+<div id="refs" class="references csl-bib-body hanging-indent"
+entry-spacing="0">
+
+<div id="ref-Feenstra:2015aa" class="csl-entry">
+
+Feenstra, Robert C., Robert Inklaar, and Marcel P. Timmer. 2015. “The
+Next Generation of the Penn World Table.” *American Economic Review* 105
+(10): 3150–82. <https://doi.org/10.1257/aer.20130954>.
+
+</div>
+
+</div>

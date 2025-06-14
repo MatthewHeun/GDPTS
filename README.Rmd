@@ -24,7 +24,8 @@ knitr::opts_chunk$set(
 
 The goal of GDPTS is to develop a harmonized time series 
 of country and world GDP,
-starting from the Penn World Tables.
+starting from the Penn World Tables
+[Feenstra et al. [-@Feenstra:2015aa]](https://doi.org/10.1257/aer.20130954).
 
 
 ## Statement of need
@@ -61,3 +62,6 @@ library(GDPTS)
 
 Find more information, including vignettes and function documentation, at 
 <https://MatthewHeun.github.io/GDPTS/>.
+
+
+## References
