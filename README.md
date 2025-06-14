@@ -17,9 +17,9 @@ world GDP, starting from the Penn World Tables [Feenstra et al.
 ## Statement of need
 
 There are many occasions when harmonized GDP time series are helpful for
-analyses. Using the Penn World Tables, this package builds that time
-series and makes it available via an R package. In addition, a
-population time series is available in this package.
+analyses. This package builds that time series and makes it available
+via an R package. In addition, a population time series is available in
+this package.
 
 ## Installation
 
