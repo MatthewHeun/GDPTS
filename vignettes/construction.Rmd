@@ -496,7 +496,10 @@ usethis::use_data(pwt_harmonized, overwrite = TRUE)
 
 ## Results
 
-The following graph shows the effect of harmonizing population data.
+### World level
+
+The following graph shows the effect 
+on the World level of harmonizing population data.
 Note that the harmonized data correctly picks up additional population
 prior to 1990.
 
@@ -577,7 +580,84 @@ pwt_harmonized |>
 ```
 
 
+### Country level
 
+The harmonization process adjusts 
+the population and GDP time series for 
+several countries. 
+The following graphs illustrate those changes.
+
+#### Germany
+
+The following graph shows German population and
+illustrates that the harmonized dataset (`pwt_harmonized`)
+uses the PWT10.01 population data
+which is the sum of West Germany (DEU) and 
+East Germany (DDR) in PWT5.6.
+
+``` {r DEUPopulationGraphs, fig.cap="German Population comparison. **** Put vertical axis in millions. Choose better colours. Re-order factors. ****"}
+pwt56_pop_DEU <- pwt::pwt5.6 |>
+  dplyr::filter(wbcode %in% c("DEU", "DDR"), !is.na(pop)) |> 
+  dplyr::select(year, wbcode, pop) |>
+  dplyr::rename(Year = year, Country = wbcode) |>
+  dplyr::mutate(
+    pop = pop * 1000, # pop is in thousands. Convert to persons.
+    Dataset = "PWT5.6", 
+    Country_Dataset = paste0(Country, "-", Dataset)
+  )
+pwt1001_pop_DEU <- pwt10::pwt10.01 |>
+  dplyr::filter(isocode %in% c("DEU", "DDR"), !is.na(pop)) |> 
+  dplyr::select(year, isocode, pop) |>
+  dplyr::rename(Year = year, Country = isocode) |>
+  dplyr::mutate(
+    pop = pop * 1e6, # pop is in millions. Convert to persons.
+    Dataset = "PWT10.01", 
+    Country_Dataset = paste0(Country, "-", Dataset)
+  )
+pwt_harmonized_pop_DEU <- pwt_harmonized |> 
+  dplyr::filter(Country %in% c("DEU", "DDR")) |> 
+  dplyr::select(Year, Country, pop) |> 
+  dplyr::mutate(
+    Dataset = "pwt_harmonized", 
+    Country_Dataset = paste0(Country, "-", Dataset)
+  )
+
+ggplot2::ggplot(mapping = ggplot2::aes(x = Year, 
+                                       y = pop, 
+                                       fill = Country_Dataset, 
+                                       linetype = Country_Dataset, 
+                                       linewidth = Country_Dataset, 
+                                       colour = Country_Dataset)) + 
+  ggplot2::geom_area(data = pwt56_pop_DEU) + 
+  ggplot2::geom_line(data = pwt1001_pop_DEU) + 
+  ggplot2::geom_line(data = pwt_harmonized_pop_DEU) + 
+  ggplot2::scale_linetype_manual(values = c(`DEU-PWT5.6` = "solid", 
+                                            `DDR-PWT5.6` = "solid", 
+                                            `DEU-PWT10.01` = "dashed", 
+                                            `DEU-pwt_harmonized` = "solid"),
+                                 name = NULL) + 
+  ggplot2::scale_fill_manual(values = c(`DEU-PWT5.6` = "red", 
+                                        `DDR-PWT5.6` = "blue", 
+                                        `DEU-PWT10.01` = "black", 
+                                        `DEU-pwt_harmonized` = "black"), 
+                             name = NULL) + 
+  ggplot2::scale_linewidth_manual(values = c(`DEU-PWT5.6` = 1, 
+                                             `DDR-PWT5.6` = 1, 
+                                             `DEU-PWT10.01` = 2, 
+                                             `DEU-pwt_harmonized` = 0.5), 
+                                  name = NULL) + 
+  ggplot2::scale_colour_manual(values = c(`DEU-PWT5.6` = "red", 
+                                          `DDR-PWT5.6` = "blue", 
+                                          `DEU-PWT10.01` = "black",
+                                          `DEU-pwt_harmonized` = "black"), 
+                               name = NULL) +
+  ggplot2::scale_x_continuous(name = NULL) + 
+  ggplot2::scale_y_continuous(name = "Population [millions]") + 
+  MKHthemes::xy_theme()
+```
+
+
+## Conclusion
 
 
 

@@ -18,6 +18,9 @@ knitr::opts_chunk$set(
 library(GDPTS)
 ```
 
+
+The `GDPTS` package
+
 ```{r}
 head(pwt_harmonized)
 ```
