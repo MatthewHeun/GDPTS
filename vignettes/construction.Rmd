@@ -1,6 +1,7 @@
 ---
 title: "Constructing the harmonized GDP dataset"
 output: rmarkdown::html_vignette
+bibliography: References.bib  
 vignette: >
   %\VignetteIndexEntry{Constructing the harmonized GDP dataset}
   %\VignetteEngine{knitr::rmarkdown}
@@ -10,36 +11,50 @@ vignette: >
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
+  comment = "#>", 
+  fig.width=6, 
+  fig.height=4, 
+  fig.retina=2
 )
 ```
 
 ```{r setup}
-library(GDPTS)
+library(dplyr)
+library(ggplot2)
+library(magrittr)
+library(MKHthemes)
 library(pwt)
 library(pwt10)
+library(tibble)
+library(tidyr)
+library(usethis)
 ```
+
+
+## Abstract
+
+This vignette constructs harmonized GDP 
+and population datasets
+suitable for use with economic and energy
+studies.
+The basis for the harmonized dataset is 
+different versions of the 
+Penn World Tables (PWT)
+[@Feenstra:2015aa].
+The data are available as an included dataset 
+(named "pwt_harmonized") in this package.
 
 
 ## Introduction
 
-This vignette constructs the harmonized GDP 
-and population datasets
-with the exact code used for that purpose.
-The basis for the harmonized dataset is 
-different versions of the 
-Penn World Tables (PWT)
-[Feenstra et al. [-@Feenstra:2015aa]](https://doi.org/10.1257/aer.20130954).
-
-
-## The need for PWT harmonization}
-
 Population and GDP time series are helpful for 
-many types of analyses, but
-the GDP time series from the World Bank **citation**
+many analyses, but
+the purchasing power parity (PPP)
+GDP time series from the World Bank [-@World-Bank:aa]
 goes back only to 1990.
 
-The Penn World Tables go back further
+The Penn World Tables purchasing power parity 
+time series go back further
 (to 1950 for some countries).
 However, the current version of the PWT (10.01) does not
 include population or GDP data for
@@ -48,61 +63,146 @@ Yugoslavia (YUG), and Czechoslovakia (CSK)
 prior to their dissolutions around 1990.
 Thus, a large portion of global population and GDP
 for years prior to 1990 are not included
-in PWT 10.01.
+in PWT10.01.
 Without population and GDP data for years prior to 1990,
-a large jump in \%/year variations can be expected
+a large jump in \%/yr variations can be expected
 between 1989 and 1990.
-Jumps in \%/year values 
+Jumps in \%/yr values 
 will lead to discontinuities in any analyses
 that use time series of population and GDP.
 
 
-### Harmonizing PWT data
+## Harmonizing PWT data
 
 Earlier versions of the PWT do, in fact,
 include population and GDP time series
 for the USSR, Yugoslavia, and Czechoslovakia.
 The last PWT version to include those data was PWT5.6,
-which used 1985 as the base year~\citep{Summers:1991aa}
-for GDP time series.
-The most recent version (10.01)
-uses 2017 as the base year~\citep{Feenstra:2015}
-for GDP time series.
+which used 1985 as the base year [@Summers:1991aa]
+for its GDP time series.
+The most recent version of the PWT (10.01)
+uses 2017 as the base year
+for GDP time series [@Feenstra:2015aa].
 
 PWT10.01 and PWT5.6 provide different real GDP time series
 that are comparable
 across both countries and years within their respective versions.
 We select "rgdpch" from PWT5.6,
-a chained purchase power parity (PPP) time series in 1985\$,
+a chained purchasing power parity (PPP) time series in 1985\$,
 described as "the recommended intertemporal GDP time series"
-in PWT5.6 documentation~\citep[p.~344]{Summers:1991aa}.
+in p. 344 of the PWT5.6 documentation [@Summers:1991aa].
 We select "rgdpe" from PWT10.01,
 an expenditure-sided real GDP time series
-at chained purchase power parity (PPP) in 2017$,
+at chained purchasing power parity (PPP) in 2017$,
 described as
 "real GDP using prices that are constant across countries and
 are also _constant over time_"
-(emphasis in original)~\citep[p.~3153]{Feenstra:2015}.
+(emphasis in original, p. 3153) [@Feenstra:2015aa].
 But the \texttt{rgdpch} time series from PWT5.6
 must be converted from base year 1985 to base year 2017
 to be consistent with PWT10.01.
 
 
-%++++++++++++++++++++++++++++++
-\subsection{Converting \pwtold{} GDP time series from 1985\$ to 2017\$}
-\label{sec:pwt56_conversion_to_2017}
-%++++++++++++++++++++++++++++++
+### Converting PWT5.6 GDP time series from 1985\$ to 2017\$
 
-To convert the \texttt{rgdpch} time series from the 1985 base year of \pwtold{}
-to the 2017 base year of \pwtnow{},
+To convert the rgdpch time series from the 1985 base year of PWT5.6 
+to the 2017 base year of PWT10.01,
 we use USA data from both versions.
-\texttt{rgdpch} (\pwtold{}) is provided in per-capita terms,
-so we first multiply the USA \texttt{rgdpch} time series
-by the USA population provided in \pwtold{}.
-(See Figure~\ref{fig:PWTPopulationComparisonGraph}
-for a comparison of USA population available in \pwtold{} and \pwtnow{}.)
+rgdpch (PWT5.6) is provided in per-capita terms,
+so we first multiply the USA rgdpch time series
+by the USA population provided in PWT5.6.
 
-<<PWTPopulationComparisonGraph, eval=eval_R_chunks, fig.cap="Comparison of USA population time series from \\pwtold{} and \\pwtnow{}.">>=
+
+``` {r}
+# Step 1
+# Gather PWT 5.6 USA data (1985 base year).
+pwt56_usa <- pwt::pwt5.6 |>
+  dplyr::filter(wbcode == "USA") |>
+  tibble::as_tibble() |>
+  magrittr::set_rownames(NULL) |>
+  # Use rgdpch (per capita chained real GDP) in 1985$
+  dplyr::select(country, wbcode, year, rgdpch, pop) |>
+  dplyr::mutate(
+    pop_56 = pop * 1000, # pop in thousands, pop_56 in persons
+    rgdpch_56 = rgdpch * pop_56, # rgdpch in $/person, rgdpch_56 in $
+    pop = NULL,
+    rgdpch = NULL
+  )
+# Extract the relevant data point (1985).
+rgdpch_56_1985 <- pwt56_usa |>
+  dplyr::filter(year == 1985) |>
+  magrittr::extract2("rgdpch_56")
+```
+
+
+``` {r}
+# Step 2
+# Gather PWT10.01 USA data (2017 base year).
+pwt1001_usa <- pwt10::pwt10.01 |>
+  tibble::as_tibble() |>
+  magrittr::set_rownames(NULL) |>
+  # Use rgdpe in 2017$
+  dplyr::select(country, isocode, year, rgdpe, pop) |>
+  dplyr::filter(isocode == "USA") |>
+  dplyr::mutate(
+    pop_1001 = pop * 1e6, # pop in millions, pop_1001 in persons
+    rgdpe_1001 = rgdpe * 1e6, # rgdpe in million 2017$, rgdpe_1001 in $
+    pop = NULL,
+    rgdpe = NULL
+  )
+# Extract the relevant data point (1985).
+rgdpe_1001_1985 <- pwt1001_usa |>
+  dplyr::filter(year == 1985) |>
+  magrittr::extract2("rgdpe_1001")
+```
+
+Next, we calculate the ratio of rgdpe in PWT10.01
+to rgdpch in PWT5.6,
+both in 1985,
+the base year for PWT5.6.
+The ratio
+gives the conversion factor from
+1985\$ (rgdpch in PWT5.6) to
+2017\$ (rgdpe in PWT10.01).
+
+``` {r}
+# Step 3
+# Calculate the ratio in the base year (1985)
+# rgdpch_fix_ratio_for_2017_base_year in 2017$/1985$
+rgdpch_fix_ratio_for_2017_base_year <- rgdpe_1001_1985 / rgdpch_56_1985
+```
+
+
+``` {r}
+# Step 4
+# Apply the ratio to the rgdpch time series from PWT5.6
+# to convert PWT5.6 to 2017 base year.
+pwt56_usa <- pwt56_usa |>
+  dplyr::mutate(
+    rgdpch_56_2017 = rgdpch_56 * rgdpch_fix_ratio_for_2017_base_year
+  )
+```
+
+``` {r}
+# Step 5
+# Make a data frame of population and GDP for later use.
+pwt_comparison_df <- dplyr::full_join(pwt56_usa, pwt1001_usa,
+                                      by = dplyr::join_by(country, 
+                                                          year, 
+                                                          wbcode == isocode)) |>
+  tidyr::pivot_longer(cols = c(pop_56, 
+                               pop_1001, 
+                               rgdpch_56, 
+                               rgdpch_56_2017, 
+                               rgdpe_1001),
+                      names_to = "varname",
+                      values_to = "value")
+```
+
+
+The figure below compares USA population available in PWT5.6 and PWT10.01.
+
+```{r PWTPopulationComparisonGraph, fig.cap = "Comparison of USA population time series from PWT5.6 and PWT10.01."} 
 pwt_comparison_df |>
   dplyr::filter(varname %in% c("pop_56", "pop_1001"),
                 !is.na(value)) |>
@@ -120,34 +220,23 @@ pwt_comparison_df |>
   ggplot2::scale_colour_viridis_d(direction = -1, end = 0.8) +
   ggplot2::labs(x = NULL, colour = NULL) +
   MKHthemes::xy_theme()
-@
+```
 
-Next, we calculate the ratio of \texttt{rgdpe} in \pwtnow{}
-to \texttt{rgdpch} in \pwtold{},
-both in 1985,
-the base year for \pwtold{}.
-The ratio
-(\Sexpr{fancy_print(rgdpch_fix_ratio_for_2017_base_year, fmt = "%.3f")})
-gives the conversion factor from
-1985\$ (\texttt{rgdpch} in \pwtold{}) to
-2017\$ (\texttt{rgdpe} in \pwtnow{}).
+
 Because both time series
-(\texttt{rgdpch} in \pwtold{}
-and \texttt{rgdpe} in \pwtnow{})
+(rgdpch in PWT5.6 and rgdpe in PWT10.01)
 provide real GDP at constant PPP across all countries and years,
 the same conversion factor applies to any country's
-\pwtold{} \texttt{rgdpch} data in all years.
-Figure~\ref{fig:PWTGDPComparisonGraph}
-shows USA
-\texttt{rgdpe} from \pwtnow{} (in 2017\$),
-USA \texttt{rgdpch} from \pwtold{} (in 1985\$), and
-a version of USA \texttt{rgdpch} in 2017\$.
-Close agreement between \texttt{rgdpch} in 2017\$
-and \texttt{rgdpe} in 2017\$ indicates
-the appropriateness of our time series choices.
+PWT5.6 rgdpch data in all years.
+The figure below shows USA
+rgdpe from PWT10.01 (in 2017\$),
+USA rgdpch from PWT5.6 (in 1985\$), and
+a version of USA rgdpch in 2017\$.
+Close agreement between rgdpch in 2017\$
+and rgdpe in 2017\$ indicates
+the appropriateness of our data conversion choices.
 
-<<PWTGDPComparisonGraph, eval=eval_R_chunks, fig.cap="Comparison of USA GDP time series from \\pwtold{} and \\pwtnow{}.">>=
-# GDP graph
+``` {r, fig.cap="Comparison of USA GDP time series from PWT5.6 PWT10.01."}
 pwt_comparison_df |>
   dplyr::filter(varname %in% c("rgdpch_56", "rgdpe_1001", "rgdpch_56_2017"),
                 !is.na(value)) |>
@@ -175,27 +264,243 @@ pwt_comparison_df |>
                                  values = c("solid", "solid", "dashed")) +
   ggplot2::labs(x = NULL, colour = NULL) +
   MKHthemes::xy_theme()
-@
+```
 
 
-After converting the \pwtold{} \texttt{rgdpch} time series for the USSR,
-Yugoslavia, and Czechoslovakia to 2017\$ in the years 1971--1989,
-we sum all countries at each year to
-obtain world population and GDP estimates,
-as shown in Figures~\ref{fig:PWTWorldPopulationGraph}
-and~\ref{fig:PWTWorldGDPGraph}, respectively.
-The data represented by solid lines
-in Figures~\ref{fig:PWTWorldPopulationGraph}
-and~\ref{fig:PWTWorldGDPGraph}
-are used throughout this paper for calculating
-energy and exergy per person,
-energy and exergy per GDP, and
-rates of change in \%/year of both.
-(See Figures~\ref{fig:PercChangeGraph}
-and~\ref{fig:PercChangeGraphCountries}.)
+``` {r}
+# Compare countries available in PWT vs. ISO 3-letter codes
+pwt_codes <- file.path("..", "data-raw", "Country_Concordance_Full.xlsx") |> 
+  readxl::read_excel() |>
+  dplyr::select("pwt5.6.name", "pwt10.name", "ISO3c")
+
+pwt56_with_country_codes <- dplyr::left_join(pwt::pwt5.6,
+                                             pwt_codes |> dplyr::select(-`pwt10.name`),
+                                             by = dplyr::join_by(country == `pwt5.6.name`)) |>
+  dplyr::select(country, wbcode, ISO3c, year, pop, rgdpch) |>
+  dplyr::filter(!is.na(pop))
+# Check for iso code differences with the following code
+# pwt56_with_country_codes |>
+#   dplyr::filter(wbcode != ISO3c)
+# Zaire (PWT5.6 wbcode "ZAR") is assigned ISO3c "COD" according to iso3c
+# China (PWT5.6 wbcode "CHN") is assigned ISO3c "CHNM" for Mainland China
+#   - Hong Kong (PWT5.6 wbcode "HKG") keeps same PFU.code "HKG"
+#   - Taiwan (PWT5.6 wbcode "OAN") is assigned PFU.code "TWN"
+# Myanmar (PWT5.6 wbcode "BUR") is assigned PFU.code "MMR"
+# Germany, West (PWT5.6 wbcode "DEU" pre-1990) is assigned PFU.code "DEUW"
+#   to distinguish from DEU (unified Germany, post-1990)
+# Romania (PWT5.6 wbcode "ROM") is assigned PFU.code "ROU" according to iso3c
+
+pwt1001_with_country_codes <- dplyr::left_join(pwt10::pwt10.01,
+                                               pwt_codes |> dplyr::select(-`pwt5.6.name`),
+                                               by = dplyr::join_by(country == `pwt10.name`)) |>
+  dplyr::select(country, isocode, ISO3c, year, pop, rgdpe) |>
+  dplyr::filter(!is.na(pop))
+# Check for iso code differences with the following code
+# pwt1001_with_country_codes |>
+#   dplyr::filter(isocode != ISO3c)
+# China (PWT10.01 wbcode "CHN") is assigned PFU.code "CHNM" for Mainland China
+#   - Hong Kong (PWT10.01 isocode "HKG") keeps same PFU.code "HKG"
+#   - Taiwan (PWT10.01 isocode "TWN") is assigned PFU.code "TWN"
+```
+
+Now take some decisions.
+
+### How to deal with Germany
+
+* Look at Germany's population
+    * PWT5.6 1988 DEU (West): 61.474 million
+    * PWT5.6 1988 DDR (East): 16.670 million
+    * PWT5.6 sum: 78.144 million
+    * PWT10.01 1988 DEU: 78.30752 million
+* So PWT10.01 DEU captures all of Germany (including East and West, prior to 1990).
+
+Decision: Use PWT10.01 exclusively for DEU.
 
 
-<<PWTWorldPopulationGraph, eval=eval_R_chunks, fig.width=6, fig.cap="Harmonized world population and population from \\pwtnow{}~\\citep{Summers:1991aa, Feenstra:2015}.">>=
+### How to deal with USSR, RUS, FoSUN (Former Soviet Union)
+
+* PWT5.6 has USSR, population of 287.630 million in 1989.
+* PWT10.01 has FoSUN countries 1990ff and populations for 1990,
+  none of which are in PWT5.6:
+    - RUS (Russian Federation): 147.5 million
+    - ARM (Armenia): 3.5 million
+    - AZE (Azerbaijan): 7.2 million
+    - BLR (Belarus): 10.2 million
+    - EST (Estonia): 1.6 million
+    - GEO (Georgia): 5.4 million
+    - KAZ (Kazakhstan): 16.4 million
+    - KGZ (Kyrgyzstan): 4.4 million
+    - LVA (Latvia): 2.7 million
+    - LTU (Lithuania): 3.7 million
+    - MDA (Moldova): 4.4 million
+    - TJK (Tajikistan): 5.3 million
+    - TKM (Turkmenistan): 3.7 million
+    - UKR (Ukraine): 51.5 million
+    - UZB (Uzbekistan): 20.4 million
+* PWT10.01 sum: 287.9 million
+* So PWT5.6 includes all the countries of FoSUN under the SUN banner.
+
+Decision: Use PWT5.6 for SUN <= 1989. Use PWT10.01 for FoSUN >= 1990.
+
+
+### How to deal with Yugoslavia:
+
+* PWT5.6 has YUG (Yugoslavia) 1990 and before, population of 23.809 million in 1990.
+* PWT10.01 FoYUG countries 1990 and following (with 1990 population):
+   - BIH (Bosnia and Herzegovina): 4.5 million
+   - HRV (Croatia): 4.8 million
+   - MKD (North Macedonia): 2.0 million
+   - MNE (Montenegro): 0.6 million
+   - SRB (Serbia): 9.5 million
+   - SVN (Slovenia): 2.0 million
+* PWT10.01 sum: 22.8 million
+* So PWT5.6 contains all countries of FoYUG under the YUG banner.
+
+Decision: Use PWT5.6 for YUG <= 1989 (trim 1990). Use PWT10.01 for FoYUG >= 1990.
+
+
+### How to deal with Czechoslovakia:
+
+* PWT5.6 has CSK (Czechoslovakia) 1990 and before, population of 15.7 million in 1990.
+* PWT10.01 lacks CSK but has FoCSK countries (with population in 1990):
+   - CZE (Czech Republic): 10.3 million
+   - SVK (Slovakia): 5.3 million
+* PWT10.01 sum: 15.6 million
+* So PWT5.6 contains all FoCZK countries under the CZK banner.
+
+Decision: Use PWT5.6 for CSK <= 1989 (trim 1990). Use PWT10.01 for FoCSK >= 1990.
+
+
+### How to deal with China:
+
+* PWT5.6
+    * PWT5.6 has CHN (China) for 1960-1992 with 1990 population of 1133.7 million.
+    * PWT5.6 has TWN (Taiwan) for 1951-1990 with 1990 population of 8.1 million.
+    * PWT5.6 has HKG (Hong Kong) for 1960-1992 with 1990 population of 5.7 million.
+    * PWT5.6 sum: 1147.5 million
+* PWT10.01
+  * PWT10.01 has CHN (China) for 1952-2019 with 1990 population of 1176.9 million.
+  * PWT10.01 has TWN Taiwan) for 1961-2019 with 1990 population of 20.3 million.
+  * PWT10.01 has HKG (Hong Kong) for 1960-2019 with 1990 population of 5.7 million.
+  * PWT10.01 sum: 1202.9 million
+* Worldometer has the following populations in 1990:
+  * CHN (China): 1153.7 million
+  * TWN (Taiwan): 20.6 million
+  * HKG (Hong Kong): 5.8 million
+  * Worldometer sum: 1180.1 million
+* So maybe PWT counts CHNM + TWN = CHN?
+# I find no evidence that CHNM + TWN = CHN in documentation for the PWT.
+# In fact, evidence points CHN and TWN being treated separately in the PWT,
+# such that CHN = CHNM (when PWT says "China", they mean "Mainland China").
+
+Decision: Treat CHN in the PWT as CHNM (Mainland China).
+
+
+## Create a data frame of standardized PWT information
+
+With the above decisions, we can now build a data frame
+of standardized PWT data.
+
+First, we convert the PWT5.6 rgdpch time series 
+for the USSR, Yugoslavia, and Czechoslovakia 
+to 2017\$ in the years before 1989.
+
+``` {r}
+# Pull in needed information from PWT5.6
+pwt56_additions <- pwt::pwt5.6 |>
+  dplyr::left_join(pwt_codes |> dplyr::select(ISO3c, `pwt5.6.name`),
+                   by = dplyr::join_by(country == `pwt5.6.name`)) |>
+  tibble::as_tibble() |>
+  magrittr::set_rownames(NULL) |>
+  # Use rgdpch (per capita chained real GDP) in 1985$
+  dplyr::select(ISO3c, year, pop, rgdpch) |>
+  dplyr::rename(Country = ISO3c, Year = year) |>
+  dplyr::filter(!is.na(pop)) |>
+  dplyr::filter(Country %in% c("SUN", "YUG", "CSK"), Year <= 1989) |>
+  dplyr::mutate(
+    pop_56 = pop * 1000, # pop in thousands, pop_56 in persons
+    rgdpch_56 = rgdpch * pop_56, # rgdpch in 1985$/person, rgdpch_56 in 1985$
+    pop = NULL,
+    rgdpch = NULL
+    ) |>
+  dplyr::rename(
+    pop = pop_56
+  ) |>
+  dplyr::mutate(
+    # Convert to 2017 base year
+    # and give the name rgdpe to match PWT10.01.
+    # rgdpch_56 in 1985$,
+    # rgdpe in 2017$, and
+    # rgdpch_fix_ratio_for_2017_base_year in 2017$/1985$
+    # (See above.)
+    rgdpe = rgdpch_56 * rgdpch_fix_ratio_for_2017_base_year,
+    rgdpch_56 = NULL
+  )
+
+# Build the standardized pwt data frame
+# starting with PWT10.01.
+pwt_harmonized <- pwt10::pwt10.01 |>
+  dplyr::left_join(pwt_codes |> dplyr::select(ISO3c, `pwt10.name`),
+                   by = dplyr::join_by(country == `pwt10.name`)) |>
+  dplyr::filter(!is.na(pop)) |>
+  tibble::as_tibble() |>
+  magrittr::set_rownames(NULL) |>
+  # Use rgdpe in 2017$
+  dplyr::select(ISO3c, year, rgdpe, pop) |>
+  dplyr::rename(
+    Country = ISO3c,
+    Year = year
+  ) |>
+  dplyr::mutate(
+    # Convert to persons and 2017$
+    pop_1001 = pop * 1e6, # pop in millions, pop_1001 in persons
+    rgdpe_1001 = rgdpe * 1e6, # rgdpe in million 2017$, rgdpe_1001 in $
+    pop = NULL,
+    rgdpe = NULL
+  ) |>
+  dplyr::rename(
+    # From this point onward,
+    # all population and GDP numbers are in persons and 2017$.
+    pop = pop_1001,
+    rgdpe = rgdpe_1001
+  ) |>
+  # Now add Soviet Union, Yugoslavia, and Czechoslovakia
+  dplyr::bind_rows(pwt56_additions)
+```
+
+Next, we aggregate all regions to the World and 
+bind to the data frame.
+
+``` {r}
+pwt_harmonized_world <- pwt_harmonized |>
+  dplyr::group_by(Year) |>
+  dplyr::summarise(pop = sum(pop), rgdpe = sum(rgdpe), .groups = "drop") |>
+  dplyr::mutate(
+    Country = "World"
+  )
+pwt_harmonized <- pwt_harmonized |>
+  dplyr::bind_rows(pwt_harmonized_world)
+```
+
+
+Finally, 
+we save the data frame to the "data" directory
+for binding with the package.
+
+``` {r}
+# pwt_harmonized is the data frame that
+# is bundled with this package.
+usethis::use_data(pwt_harmonized, overwrite = TRUE)
+```
+
+
+## Results
+
+The following graph shows the effect of harmonizing population data.
+Note that the harmonized data correctly picks up additional population
+prior to 1990.
+
+``` {r PWTWorldPopulationGraph, fig.cap="Harmonized world population and population from PWT10.01 [@Summers:1991aa, Feenstra:2015aa]."}
 pwt1001_pop <- pwt10::pwt10.01 |>
   dplyr::select(year, isocode, pop) |>
   dplyr::rename(Year = year) |>
@@ -218,9 +523,9 @@ pwt_harmonized |>
     pop = pop / 1e9, # convert from persons to billion
     pop_type = dplyr::case_match(
       pop_type,
-      "pop_1001" ~ "PWT 10.01",
+      "pop_1001" ~ "PWT10.01",
       "pop_harmonized" ~ "Harmonized"),
-    pop_type = factor(pop_type, levels = c("Harmonized", "PWT 10.01"))
+    pop_type = factor(pop_type, levels = c("Harmonized", "PWT10.01"))
   ) |>
   ggplot2::ggplot(mapping = ggplot2::aes(x = Year, y = pop, linetype = pop_type)) +
   ggplot2::geom_line() +
@@ -230,10 +535,13 @@ pwt_harmonized |>
   ggplot2::scale_linetype_manual(name = NULL,
                                  values = c("solid", "dashed")) +
   MKHthemes::xy_theme()
-@
 
+```
 
-<<PWTWorldGDPGraph, eval=eval_R_chunks, fig.width=6, fig.cap="Harmonized world GDP and world GDP from \\pwtnow{}~\\citep{Summers:1991aa, Feenstra:2015}.">>=
+Finally, we can see the harmonized world GDP time series
+avoids the unexpected rise in 1990 observed in PWT10.01.
+
+``` {r PWTWorldGDPGraph, fig.cap="Harmonized world GDP and world GDP from PWT10.01 ([@Summers:1991aa] and [@Feenstra:2015aa])."}
 pwt1001_rgdpe <- pwt10::pwt10.01 |>
   dplyr::select(year, isocode, rgdpe) |>
   dplyr::rename(Year = year) |>
@@ -255,8 +563,8 @@ pwt_harmonized |>
     rgdpe_type = dplyr::case_match(
       rgdpe_type,
       "rgdpe" ~ "Harmonized",
-      "rgdpe_1001" ~ "PWT 10.01"),
-    rgdpe_type = factor(rgdpe_type, levels = c("Harmonized", "PWT 10.01"))
+      "rgdpe_1001" ~ "PWT10.01"),
+    rgdpe_type = factor(rgdpe_type, levels = c("Harmonized", "PWT10.01"))
   ) |>
   ggplot2::ggplot(mapping = ggplot2::aes(x = Year, y = rgdpe, linetype = rgdpe_type)) +
   ggplot2::geom_line() +
@@ -266,7 +574,10 @@ pwt_harmonized |>
   ggplot2::scale_linetype_manual(name = NULL,
                                  values = c("solid", "dashed")) +
   MKHthemes::xy_theme()
-@
+```
+
+
+
 
 
 

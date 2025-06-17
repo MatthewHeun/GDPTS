@@ -5,7 +5,13 @@
 \alias{pwt_harmonized}
 \title{A data set of harmonized PWT data}
 \format{
-A data frame of rgdpe data.
+A tibble with 10559 rows and 4 columns.
+\describe{
+\item{Country}{A column of strings identifying countries by ISO3c codes.}
+\item{Year}{A column of integer years.}
+\item{pop}{A double-precision column of population in persons.}
+\item{rgdpe}{A double-precision column of GDP in constant 2017$.}
+}
 }
 \usage{
 pwt_harmonized
