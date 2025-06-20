@@ -704,7 +704,9 @@ pwt_harmonized_pop_YUG <- pwt_harmonized |>
   dplyr::mutate(
     Dataset = "pwt_harmonized"
   )
-pwt_pop_YUG <- dplyr::bind_rows(pwt56_pop_YUG, 
+pwt_pop_YUG <- dplyr::bind_rows(pwt56_pop_YUG |> 
+                                  # To avoid double-counting 1990
+                                  dplyr::filter(Year < 1990), 
                                 pwt1001_pop_FYUG, 
                                 pwt_harmonized_pop_YUG) |> 
   magrittr::set_rownames(NULL) |>
@@ -731,9 +733,10 @@ pwt_pop_YUG <- dplyr::bind_rows(pwt56_pop_YUG,
 ggplot2::ggplot(mapping = ggplot2::aes(x = Year, 
                                        y = pop, 
                                        fill = Country_Dataset, 
-                                       linetype = Country_Dataset, 
-                                       linewidth = Country_Dataset, 
-                                       colour = Country_Dataset)) +
+                                       # linetype = Country_Dataset, 
+                                       # linewidth = Country_Dataset, 
+                                       # colour = Country_Dataset
+                                       )) +
   ggplot2::geom_area(data = pwt_pop_YUG |> 
                        dplyr::filter(Country_Dataset %in% 
                                        c("YUG-PWT5.6",
