@@ -305,7 +305,7 @@ pwt1001_with_country_codes <- dplyr::left_join(pwt10::pwt10.01,
 
 Now take some decisions.
 
-### How to deal with Germany
+### Germany
 
 * Look at Germany's population
     * PWT5.6 1988 DEU (West): 61.474 million
@@ -317,7 +317,7 @@ Now take some decisions.
 Decision: Use PWT10.01 exclusively for DEU.
 
 
-### How to deal with USSR, RUS, FoSUN (Former Soviet Union)
+### USSR, RUS, FoSUN (Former Soviet Union)
 
 * PWT5.6 has USSR, population of 287.630 million in 1989.
 * PWT10.01 has FoSUN countries 1990ff and populations for 1990,
@@ -343,7 +343,7 @@ Decision: Use PWT10.01 exclusively for DEU.
 Decision: Use PWT5.6 for SUN <= 1989. Use PWT10.01 for FoSUN >= 1990.
 
 
-### How to deal with Yugoslavia:
+### Yugoslavia
 
 * PWT5.6 has YUG (Yugoslavia) 1990 and before, population of 23.809 million in 1990.
 * PWT10.01 FoYUG countries 1990 and following (with 1990 population):
@@ -359,7 +359,7 @@ Decision: Use PWT5.6 for SUN <= 1989. Use PWT10.01 for FoSUN >= 1990.
 Decision: Use PWT5.6 for YUG <= 1989 (trim 1990). Use PWT10.01 for FoYUG >= 1990.
 
 
-### How to deal with Czechoslovakia:
+### Czechoslovakia:
 
 * PWT5.6 has CSK (Czechoslovakia) 1990 and before, population of 15.7 million in 1990.
 * PWT10.01 lacks CSK but has FoCSK countries (with population in 1990):
@@ -371,7 +371,7 @@ Decision: Use PWT5.6 for YUG <= 1989 (trim 1990). Use PWT10.01 for FoYUG >= 1990
 Decision: Use PWT5.6 for CSK <= 1989 (trim 1990). Use PWT10.01 for FoCSK >= 1990.
 
 
-### How to deal with China:
+### China:
 
 * PWT5.6
     * PWT5.6 has CHN (China) for 1960-1992 with 1990 population of 1133.7 million.
@@ -591,8 +591,8 @@ The following graphs illustrate those changes.
 
 The following graph shows German population and
 illustrates that the harmonized dataset (`pwt_harmonized`)
-uses the PWT10.01 population data
-which is the sum of West Germany (DEU) and 
+uses the PWT10.01 population data,
+which is also the sum of West Germany (DEU) and 
 East Germany (DDR) in PWT5.6.
 
 ``` {r DEUPopulationGraphs, fig.cap="German Population comparison. **** Put vertical axis in millions. Choose better colours. Re-order factors. ****"}
@@ -626,10 +626,10 @@ pwt_pop_DEU <- dplyr::bind_rows(pwt56_pop_DEU,
     Country = as.character(Country), # Eliminate factor information.
     Country_Dataset = paste0(Country, "-", Dataset),
     Country_Dataset = factor(Country_Dataset, 
-                             levels = c("DDR-PWT5.6", 
-                                        "DEU-PWT5.6", 
-                                        "DEU-PWT10.01", 
-                                        "DEU-pwt_harmonized"))
+                             levels = c("DEU-PWT10.01", 
+                                        "DEU-pwt_harmonized", 
+                                        "DDR-PWT5.6", 
+                                        "DEU-PWT5.6"))
   )
 
 ggplot2::ggplot(mapping = ggplot2::aes(x = Year, 
@@ -646,30 +646,114 @@ ggplot2::ggplot(mapping = ggplot2::aes(x = Year,
                        dplyr::filter(Country_Dataset == "DEU-PWT10.01")) + 
   ggplot2::geom_line(data = pwt_pop_DEU |> 
                        dplyr::filter(Country_Dataset == "DEU-pwt_harmonized")) + 
-  ggplot2::scale_linetype_manual(values = c(`DEU-PWT5.6` = "solid", 
-                                            `DDR-PWT5.6` = "solid", 
-                                            `DEU-PWT10.01` = "dashed", 
-                                            `DEU-pwt_harmonized` = "solid"),
+  ggplot2::scale_linetype_manual(values = c(`DEU-PWT10.01` = "dashed", 
+                                            `DEU-pwt_harmonized` = "solid", 
+                                            `DEU-PWT5.6` = "solid", 
+                                            `DDR-PWT5.6` = "solid"),
                                  name = NULL) + 
   ggplot2::scale_fill_manual(values = c(`DEU-PWT5.6` = "red", 
                                         `DDR-PWT5.6` = "blue", 
-                                        `DEU-PWT10.01` = "black", 
-                                        `DEU-pwt_harmonized` = "black"), 
+                                        `DEU-pwt_harmonized` = "black",
+                                        `DEU-PWT10.01` = "black"), 
                              name = NULL) + 
-  ggplot2::scale_linewidth_manual(values = c(`DEU-PWT5.6` = 1, 
-                                             `DDR-PWT5.6` = 1, 
-                                             `DEU-PWT10.01` = 2, 
-                                             `DEU-pwt_harmonized` = 0.5), 
+  ggplot2::scale_linewidth_manual(values = c(`DEU-PWT10.01` = 2, 
+                                             `DEU-pwt_harmonized` = 0.5, 
+                                             `DEU-PWT5.6` = 1, 
+                                             `DDR-PWT5.6` = 1), 
                                   name = NULL) + 
-  ggplot2::scale_colour_manual(values = c(`DEU-PWT5.6` = "red", 
-                                          `DDR-PWT5.6` = "blue", 
-                                          `DEU-PWT10.01` = "black",
-                                          `DEU-pwt_harmonized` = "black"), 
+  ggplot2::scale_colour_manual(values = c(`DEU-PWT10.01` = "black",
+                                          `DEU-pwt_harmonized` = "black", 
+                                          `DEU-PWT5.6` = "red", 
+                                          `DDR-PWT5.6` = "blue"), 
                                name = NULL) +
   ggplot2::scale_x_continuous(name = NULL) + 
   ggplot2::scale_y_continuous(name = "Population [millions]") + 
   MKHthemes::xy_theme()
 ```
+
+
+#### Yugoslavia
+
+``` {r} 
+pwt56_pop_YUG <- pwt::pwt5.6 |>
+  dplyr::filter(wbcode == "YUG", !is.na(pop)) |> 
+  dplyr::select(year, wbcode, pop) |>
+  dplyr::rename(Year = year, Country = wbcode) |>
+  dplyr::mutate(
+    pop = pop * 1000, # pop is in thousands. Convert to persons.
+    Dataset = "PWT5.6" 
+  )
+pwt1001_pop_FYUG <- pwt10::pwt10.01 |>
+  dplyr::filter(isocode %in% c("BIH", "HRV", "MKD",
+                               "MNE", "SRB", "SVN"),  !is.na(pop)) |> 
+  dplyr::select(year, isocode, pop) |>
+  dplyr::rename(Year = year, Country = isocode) |>
+  dplyr::mutate(
+    pop = pop * 1e6, # pop is in millions. Convert to persons.
+    Dataset = "PWT10.01" 
+  )
+pwt_harmonized_pop_YUG <- pwt_harmonized |> 
+  dplyr::filter(Country %in% c("YUG", "BIH", "HRV", "MKD",
+                               "MNE", "SRB", "SVN")) |> 
+  dplyr::select(Year, Country, pop) |> 
+  dplyr::mutate(
+    Dataset = "pwt_harmonized"
+  )
+pwt_pop_YUG <- dplyr::bind_rows(pwt56_pop_YUG, 
+                                pwt1001_pop_FYUG, 
+                                pwt_harmonized_pop_YUG) |> 
+  magrittr::set_rownames(NULL) |>
+  dplyr::mutate(
+    Country = as.character(Country), # Eliminate factor information.
+    Country_Dataset = paste0(Country, "-", Dataset),
+    Country_Dataset = factor(Country_Dataset,
+                             levels = c("YUG-PWT5.6",
+                                        "BIH-PWT10.01", 
+                                        "HRV-PWT10.01", 
+                                        "MKD-PWT10.01", 
+                                        "MNE-PWT10.01", 
+                                        "SRB-PWT10.01", 
+                                        "SVN-PWT10.01",
+                                        "YUG-pwt_harmonized", 
+                                        "BIH-pwt_harmonized", 
+                                        "HRV-pwt_harmonized", 
+                                        "MKD-pwt_harmonized", 
+                                        "MNE-pwt_harmonized",
+                                        "SRB-pwt_harmonized", 
+                                        "SVN-pwt_harmonized"))
+  )
+
+ggplot2::ggplot(mapping = ggplot2::aes(x = Year, 
+                                       y = pop, 
+                                       fill = Country_Dataset, 
+                                       linetype = Country_Dataset, 
+                                       linewidth = Country_Dataset, 
+                                       colour = Country_Dataset)) +
+  ggplot2::geom_area(data = pwt_pop_YUG |> 
+                       dplyr::filter(Country_Dataset %in% 
+                                       c("YUG-PWT5.6",
+                                         "BIH-PWT10.01", 
+                                         "HRV-PWT10.01", 
+                                         "MKD-PWT10.01", 
+                                         "MNE-PWT10.01", 
+                                         "SRB-PWT10.01", 
+                                         "SVN-PWT10.01"))) + 
+  ggplot2::scale_fill_manual(values = c(`YUG-PWT5.6` = "red", 
+                                        `BIH-PWT10.01` = "orange", 
+                                         `HRV-PWT10.01` = "yellow", 
+                                         `MKD-PWT10.01` = "green", 
+                                         `MNE-PWT10.01` = "blue", 
+                                         `SRB-PWT10.01` = "violet", 
+                                         `SVN-PWT10.01` = "black"), 
+                             name = NULL)
+
+
+
+
+```
+
+
+
 
 
 ## Conclusion
