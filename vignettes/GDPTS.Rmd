@@ -19,7 +19,7 @@ library(GDPTS)
 ```
 
 
-The `GDPTS` package
+The `GDPTS` package provides a harmonized world GDP time series.
 
 ```{r}
 head(pwt_harmonized)
