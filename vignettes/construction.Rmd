@@ -667,9 +667,14 @@ ggplot2::ggplot(mapping = ggplot2::aes(x = Year,
                                           `DDR-PWT5.6` = "blue"), 
                                name = NULL) +
   ggplot2::scale_x_continuous(name = NULL) + 
-  ggplot2::scale_y_continuous(name = "Population [millions]") + 
+  ggplot2::scale_y_continuous(name = "Population [millions]", 
+                              labels = scales::label_number(scale = 1e-6)) + 
   MKHthemes::xy_theme()
 ```
+
+
+#### Soviet Union
+
 
 
 #### Yugoslavia
@@ -745,11 +750,11 @@ ggplot2::ggplot(mapping = ggplot2::aes(x = Year,
                                          `MNE-PWT10.01` = "blue", 
                                          `SRB-PWT10.01` = "violet", 
                                          `SVN-PWT10.01` = "black"), 
-                             name = NULL)
-
-
-
-
+                             name = NULL) +
+  ggplot2::scale_x_continuous(name = NULL) + 
+  ggplot2::scale_y_continuous(name = "Population [millions]", 
+                              labels = scales::label_number(scale = 1e-6)) + 
+  MKHthemes::xy_theme()
 ```
 
 
