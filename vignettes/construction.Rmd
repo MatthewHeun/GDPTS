@@ -602,8 +602,7 @@ pwt56_pop_DEU <- pwt::pwt5.6 |>
   dplyr::rename(Year = year, Country = wbcode) |>
   dplyr::mutate(
     pop = pop * 1000, # pop is in thousands. Convert to persons.
-    Dataset = "PWT5.6", 
-    Country_Dataset = paste0(Country, "-", Dataset)
+    Dataset = "PWT5.6" 
   )
 pwt1001_pop_DEU <- pwt10::pwt10.01 |>
   dplyr::filter(isocode %in% c("DEU", "DDR"), !is.na(pop)) |> 
@@ -611,15 +610,26 @@ pwt1001_pop_DEU <- pwt10::pwt10.01 |>
   dplyr::rename(Year = year, Country = isocode) |>
   dplyr::mutate(
     pop = pop * 1e6, # pop is in millions. Convert to persons.
-    Dataset = "PWT10.01", 
-    Country_Dataset = paste0(Country, "-", Dataset)
+    Dataset = "PWT10.01"
   )
 pwt_harmonized_pop_DEU <- pwt_harmonized |> 
   dplyr::filter(Country %in% c("DEU", "DDR")) |> 
   dplyr::select(Year, Country, pop) |> 
   dplyr::mutate(
-    Dataset = "pwt_harmonized", 
-    Country_Dataset = paste0(Country, "-", Dataset)
+    Dataset = "pwt_harmonized"
+  )
+pwt_pop_DEU <- dplyr::bind_rows(pwt56_pop_DEU, 
+                                pwt1001_pop_DEU, 
+                                pwt_harmonized_pop_DEU) |> 
+  magrittr::set_rownames(NULL) |>
+  dplyr::mutate(
+    Country = as.character(Country), # Eliminate factor information.
+    Country_Dataset = paste0(Country, "-", Dataset),
+    Country_Dataset = factor(Country_Dataset, 
+                             levels = c("DDR-PWT5.6", 
+                                        "DEU-PWT5.6", 
+                                        "DEU-PWT10.01", 
+                                        "DEU-pwt_harmonized"))
   )
 
 ggplot2::ggplot(mapping = ggplot2::aes(x = Year, 
@@ -628,9 +638,14 @@ ggplot2::ggplot(mapping = ggplot2::aes(x = Year,
                                        linetype = Country_Dataset, 
                                        linewidth = Country_Dataset, 
                                        colour = Country_Dataset)) + 
-  ggplot2::geom_area(data = pwt56_pop_DEU) + 
-  ggplot2::geom_line(data = pwt1001_pop_DEU) + 
-  ggplot2::geom_line(data = pwt_harmonized_pop_DEU) + 
+  # ggplot2::geom_area(data = pwt56_pop_DEU) + 
+  ggplot2::geom_area(data = pwt_pop_DEU |> 
+                       dplyr::filter(endsWith(Dataset, "PWT5.6"))) + 
+  # ggplot2::geom_line(data = pwt1001_pop_DEU) + 
+  ggplot2::geom_line(data = pwt_pop_DEU |> 
+                       dplyr::filter(Country_Dataset == "DEU-PWT10.01")) + 
+  ggplot2::geom_line(data = pwt_pop_DEU |> 
+                       dplyr::filter(Country_Dataset == "DEU-pwt_harmonized")) + 
   ggplot2::scale_linetype_manual(values = c(`DEU-PWT5.6` = "solid", 
                                             `DDR-PWT5.6` = "solid", 
                                             `DEU-PWT10.01` = "dashed", 
