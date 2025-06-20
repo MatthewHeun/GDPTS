@@ -733,7 +733,7 @@ pwt_pop_YUG <- dplyr::bind_rows(pwt56_pop_YUG |>
 ggplot2::ggplot(mapping = ggplot2::aes(x = Year, 
                                        y = pop, 
                                        fill = Country_Dataset, 
-                                       # linetype = Country_Dataset, 
+                                       linetype = Country_Dataset,
                                        # linewidth = Country_Dataset, 
                                        # colour = Country_Dataset
                                        )) +
@@ -746,6 +746,13 @@ ggplot2::ggplot(mapping = ggplot2::aes(x = Year,
                                          "MNE-PWT10.01", 
                                          "SRB-PWT10.01", 
                                          "SVN-PWT10.01"))) + 
+  ggplot2::geom_line(data = pwt_pop_YUG |> 
+                       dplyr::filter(Dataset == "pwt_harmonized") |> 
+                       dplyr::group_by(Year) |> 
+                       dplyr::summarise(pop = sum(pop)) |> 
+                       dplyr::mutate(
+                         Country_Dataset = "YUG-pwt_harmonized"
+                       )) +
   ggplot2::scale_fill_manual(values = c(`YUG-PWT5.6` = "red", 
                                         `BIH-PWT10.01` = "orange", 
                                          `HRV-PWT10.01` = "yellow", 
@@ -754,6 +761,8 @@ ggplot2::ggplot(mapping = ggplot2::aes(x = Year,
                                          `SRB-PWT10.01` = "violet", 
                                          `SVN-PWT10.01` = "black"), 
                              name = NULL) +
+  ggplot2::scale_linetype_manual(values = c(`YUG-pwt_harmonized` = "solid"),
+                                 name = NULL) + 
   ggplot2::scale_x_continuous(name = NULL) + 
   ggplot2::scale_y_continuous(name = "Population [millions]", 
                               labels = scales::label_number(scale = 1e-6)) + 
